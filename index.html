@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Jimpitan RT 07 / RW 02</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- QR Code Canvas Library (Instan & Offline) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+  <style>
+    .active-tab {
+      border-bottom: 3px solid #10b981;
+      color: #047857;
+      font-weight: bold;
+    }
+    /* PERBAIKAN UTAMA FITUR CETAK */
+    @media print {
+      body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      header, main, button {
+        display: none !important;
+      }
+      #area-cetak {
+        display: block !important;
+        width: 100% !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 font-sans pb-10">
+
+  <!-- Header -->
+  <header class="bg-emerald-700 text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-emerald-800 rounded-lg">
+          <i class="fa-solid fa-coins text-yellow-300 text-xl"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight">E-Jimpitan RT 07 / RW 02</h1>
+          <p class="text-xs text-emerald-200">Sistem Jimpitan & Data Warga Digital</p>
+        </div>
+      </div>
+      <button onclick="resetSemuaData()" class="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center space-x-1">
+        <i class="fa-solid fa-rotate-left"></i>
+        <span class="hidden sm:inline">Reset Data</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Container Utama -->
+  <main class="max-w-4xl mx-auto p-4 space-y-6">
+
+    <!-- Card Rekap -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex items-center space-x-4">
+        <div class="p-3 bg-emerald-100 text-emerald-600 rounded-xl"><i class="fa-solid fa-wallet text-2xl"></i></div>
+        <div>
+          <p class="text-xs text-gray-500 font-medium">Total Kas Terkumpul</p>
+          <h3 id="total-saldo" class="text-xl font-bold text-gray-800">Rp 0</h3>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex items-center space-x-4">
+        <div class="p-3 bg-blue-100 text-blue-600 rounded-xl"><i class="fa-solid fa-arrow-down-long text-2xl"></i></div>
+        <div>
+          <p class="text-xs text-gray-500 font-medium">Total Pemasukan</p>
+          <h3 id="total-masuk" class="text-xl font-bold text-emerald-600">Rp 0</h3>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex items-center space-x-4">
+        <div class="p-3 bg-rose-100 text-rose-600 rounded-xl"><i class="fa-solid fa-arrow-up-long text-2xl"></i></div>
+        <div>
+          <p class="text-xs text-gray-500 font-medium">Total Pengeluaran</p>
+          <h3 id="total-keluar" class="text-xl font-bold text-rose-600">Rp 0</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigasi Tab -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex border-b text-xs md:text-sm">
+      <button type="button" id="btn-tab-catat" onclick="switchTab('catat')" class="flex-1 py-3 text-center active-tab"><i class="fa-solid fa-pen-to-square mr-1"></i>Catat</button>
+      <button type="button" id="btn-tab-scan" onclick="switchTab('scan')" class="flex-1 py-3 text-center text-gray-500"><i class="fa-solid fa-qrcode mr-1"></i>Scan</button>
+      <button type="button" id="btn-tab-warga" onclick="switchTab('warga')" class="flex-1 py-3 text-center text-gray-500"><i class="fa-solid fa-users mr-1"></i>Warga</button>
+      <button type="button" id="btn-tab-riwayat" onclick="switchTab('riwayat')" class="flex-1 py-3 text-center text-gray-500"><i class="fa-solid fa-list-check mr-1"></i>Laporan</button>
+    </div>
+
+    <!-- TAB 1: FORM CATAT -->
+    <div id="sec-catat" class="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 space-y-4">
+      <h2 class="text-base font-bold text-gray-700 border-b pb-2">Catat Penarikan / Pengeluaran</h2>
+      <form onsubmit="simpanTransaksi(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Jenis Transaksi</label>
+          <select id="jenis" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none">
+            <option value="masuk">Pemasukan (Jimpitan Warga)</option>
+            <option value="keluar">Pengeluaran Kas RT</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Warga / Keterangan</label>
+          <input type="text" id="keterangan" placeholder="Contoh: Pak Budi / Konsumsi Ronda" required class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Nominal (Rp)</label>
+          <input type="number" id="nominal" placeholder="2000" required min="100" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none">
+        </div>
+        <button type="submit" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md text-sm"><i class="fa-solid fa-floppy-disk mr-1"></i>Simpan Transaksi</button>
+      </form>
+    </div>
+
+    <!-- TAB 2: SCAN & QUICK SIMULATOR -->
+    <div id="sec-scan" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-gray-200 space-y-5">
+      <div>
+        <h2 class="text-base font-bold text-gray-700 border-b pb-2 mb-3"><i class="fa-solid fa-camera text-emerald-600 mr-2"></i>Kamera Scanner QR Code</h2>
+        <div class="p-4 bg-gray-50 rounded-xl border border-dashed border-gray-300 text-center space-y-3">
+          <p class="text-xs text-gray-500">Scan Barcode Warga dengan Kamera HP:</p>
+          <input type="file" id="camera-file" accept="image/*" capture="environment" onchange="bacaQRImage(event)" class="hidden">
+          <button type="button" onclick="document.getElementById('camera-file').click()" class="px-5 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-md"><i class="fa-solid fa-camera mr-2"></i>Buka Kamera / Foto QR</button>
+        </div>
+      </div>
+
+      <hr class="border-gray-200">
+
+      <div>
+        <h2 class="text-base font-bold text-gray-700 border-b pb-2 mb-2"><i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>Simulasi Quick Scan (Pilih Cepat)</h2>
+        <p class="text-xs text-gray-500 mb-3">Klik nama warga untuk mensimulasikan hasil scan QR Code:</p>
+        <div id="list-quick-scan" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+
+    <!-- TAB 3: MANAJEMEN DATA WARGA -->
+    <div id="sec-warga" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-gray-200 space-y-6">
+      <div>
+        <h2 class="text-base font-bold text-gray-700 border-b pb-2 mb-3">Tambah / Edit Data Warga</h2>
+        <form onsubmit="simpanWarga(event)" class="space-y-3">
+          <input type="hidden" id="warga-index">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input type="text" id="warga-nama" placeholder="Nama Kepala Keluarga (Misal: Pak Budi)" required class="p-3 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none">
+            <input type="text" id="warga-no" placeholder="Nomor Rumah / Blok (Misal: Rumah No. 12)" required class="p-3 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none">
+          </div>
+          <div class="flex space-x-2">
+            <button type="submit" id="btn-warga-submit" class="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs"><i class="fa-solid fa-plus mr-1"></i>Tambah Warga</button>
+            <button type="button" onclick="resetFormWarga()" class="py-3 px-4 bg-gray-300 text-gray-700 font-bold rounded-xl text-xs">Batal</button>
+          </div>
+        </form>
+      </div>
+
+      <hr class="border-gray-200">
+
+      <div>
+        <h2 class="text-base font-bold text-gray-700 border-b pb-2 mb-3">Daftar Warga RT 07</h2>
+        <div id="list-warga" class="space-y-3 max-h-96 overflow-y-auto pr-1"></div>
+      </div>
+    </div>
+
+    <!-- TAB 4: LAPORAN & EKSPOR -->
+    <div id="sec-riwayat" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-gray-200 space-y-4">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h2 class="text-base font-bold text-gray-700">Laporan Transaksi Kas</h2>
+        <button type="button" onclick="cetakLaporan()" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg shadow-sm"><i class="fa-solid fa-print mr-1"></i>Cetak Laporan</button>
+      </div>
+      <div id="list-riwayat" class="space-y-2"></div>
+    </div>
+
+  </main>
+
+  <!-- AREA CETAK KHUSUS (DIBUAT TERLIHAT UNTUK MEDIA PRINT) -->
+  <div id="area-cetak" class="p-6 hidden bg-white">
+    <div id="isi-cetak"></div>
+  </div>
+
+  <script>
+    let dataJimpitan = JSON.parse(localStorage.getItem('jimpitan_rt07')) || [];
+    let dataWarga = JSON.parse(localStorage.getItem('warga_rt07')) || [
+      { nama: "Pak Budi", rumah: "Rumah No. 01" },
+      { nama: "Pak RT Slamet", rumah: "Rumah No. 07" }
+    ];
+
+    function switchTab(tabName) {
+      const allTabs = ['catat', 'scan', 'warga', 'riwayat'];
+      allTabs.forEach(t => {
+        const sec = document.getElementById('sec-' + t);
+        const btn = document.getElementById('btn-tab-' + t);
+        if (sec) sec.classList.add('hidden');
+        if (btn) btn.className = "flex-1 py-3 text-center text-gray-500";
+      });
+
+      const activeSec = document.getElementById('sec-' + tabName);
+      const activeBtn = document.getElementById('btn-tab-' + tabName);
+      
+      if (activeSec) activeSec.classList.remove('hidden');
+      if (activeBtn) activeBtn.className = "flex-1 py-3 text-center active-tab";
+
+      if (tabName === 'scan') renderQuickScan();
+      if (tabName === 'warga') renderListWarga();
+    }
+
+    function resetSemuaData() {
+      if (confirm("⚠️ Yakin ingin MENGHAPUS SEMUA DATA jimpitan dan data warga?")) {
+        localStorage.removeItem('jimpitan_rt07');
+        localStorage.removeItem('warga_rt07');
+        alert("✅ Data berhasil di-reset!");
+        location.reload();
+      }
+    }
+
+    function simpanTransaksi(e) {
+      e.preventDefault();
+      const jenis = document.getElementById('jenis').value;
+      const keterangan = document.getElementById('keterangan').value.trim();
+      const nominal = parseInt(document.getElementById('nominal').value);
+      const tanggal = new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
+
+      if (!keterangan || isNaN(nominal)) return;
+
+      dataJimpitan.unshift({ jenis, keterangan, nominal, tanggal });
+      localStorage.setItem('jimpitan_rt07', JSON.stringify(dataJimpitan));
+      
+      document.getElementById('keterangan').value = '';
+      document.getElementById('nominal').value = '';
+      renderData();
+      alert('✅ Transaksi berhasil disimpan!');
+    }
+
+    function simpanWarga(e) {
+      e.preventDefault();
+      const idx = document.getElementById('warga-index').value;
+      const nama = document.getElementById('warga-nama').value.trim();
+      const rumah = document.getElementById('warga-no').value.trim();
+
+      if (idx === "") {
+        dataWarga.push({ nama, rumah });
+      } else {
+        dataWarga[idx] = { nama, rumah };
+      }
+
+      localStorage.setItem('warga_rt07', JSON.stringify(dataWarga));
+      resetFormWarga();
+      renderListWarga();
+      alert('✅ Data warga berhasil disimpan!');
+    }
+
+    function editWarga(idx) {
+      document.getElementById('warga-index').value = idx;
+      document.getElementById('warga-nama').value = dataWarga[idx].nama;
+      document.getElementById('warga-no').value = dataWarga[idx].rumah;
+      document.getElementById('btn-warga-submit').innerHTML = `<i class="fa-solid fa-check mr-1"></i>Simpan Perubahan`;
+    }
+
+    function hapusWarga(idx) {
+      if (confirm(`Hapus data ${dataWarga[idx].nama}?`)) {
+        dataWarga.splice(idx, 1);
+        localStorage.setItem('warga_rt07', JSON.stringify(dataWarga));
+        renderListWarga();
+      }
+    }
+
+    function resetFormWarga() {
+      document.getElementById('warga-index').value = "";
+      document.getElementById('warga-nama').value = "";
+      document.getElementById('warga-no').value = "";
+      document.getElementById('btn-warga-submit').innerHTML = `<i class="fa-solid fa-plus mr-1"></i>Tambah Warga`;
+    }
+
+    function renderListWarga() {
+      const container = document.getElementById('list-warga');
+      if (dataWarga.length === 0) {
+        container.innerHTML = `<p class="text-xs text-gray-400 py-4 text-center">Belum ada data warga.</p>`;
+        return;
+      }
+      
+      let html = '';
+      dataWarga.forEach((w, i) => {
+        html += `
+          <div class="p-3 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-bold text-gray-800">${w.nama}</p>
+                <p class="text-xs text-gray-500">${w.rumah}</p>
+              </div>
+              <div class="flex space-x-1">
+                <button onclick="cetakStikerQR(${i})" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm"><i class="fa-solid fa-print mr-1"></i>Cetak Barcode</button>
+                <button onclick="editWarga(${i})" class="px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="hapusWarga(${i})" class="px-2.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </div>
+
+            <div class="bg-white p-2 rounded-xl border border-gray-100 flex items-center justify-center space-x-3">
+              <canvas id="qr-warga-${i}"></canvas>
+              <div class="text-[11px] text-gray-400 leading-tight">
+                <p class="font-semibold text-emerald-700">QR Ready!</p>
+                <p>Siap di-scan langsung dari HP</p>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+
+      setTimeout(() => {
+        dataWarga.forEach((w, i) => {
+          const el = document.getElementById(`qr-warga-${i}`);
+          if (el) {
+            new QRious({
+              element: el,
+              value: `${w.nama} (${w.rumah})`,
+              size: 90
+            });
+          }
+        });
+      }, 100);
+    }
+
+    function renderQuickScan() {
+      const container = document.getElementById('list-quick-scan');
+      if (dataWarga.length === 0) {
+        container.innerHTML = `<p class="text-xs text-gray-400">Belum ada data warga.</p>`;
+        return;
+      }
+      let html = '';
+      dataWarga.forEach(w => {
+        html += `<button type="button" onclick="pilihQuickScan('${w.nama} (${w.rumah})')" class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-200"><i class="fa-solid fa-user-check mr-1"></i>${w.nama}</button>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function pilihQuickScan(label) {
+      document.getElementById('keterangan').value = label;
+      switchTab('catat');
+      alert(`✅ Terpilih: ${label}. Masukkan nominal jimpitan.`);
+    }
+
+    function bacaQRImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        document.getElementById('keterangan').value = file.name.replace(/\.[^/.]+$/, "");
+        switchTab('catat');
+        alert('✅ Foto terdeteksi! Silakan periksa nama & masukkan nominal.');
+      }
+    }
+
+    /* PERBAIKAN CETAK STIKER */
+    function cetakStikerQR(idx) {
+      const w = dataWarga[idx];
+      const areaCetak = document.getElementById('area-cetak');
+      const isiCetak = document.getElementById('isi-cetak');
+
+      isiCetak.innerHTML = `
+        <div style="border:2px dashed #000; padding:20px; width:260px; text-align:center; margin:30px auto; border-radius:15px; background:#fff;">
+          <h2 style="margin:0; font-size:16px; font-weight:bold;">E-JIMPITAN RT 07</h2>
+          <p style="margin:2px 0 10px 0; font-size:12px;">RW 02 Desa Mandiraja</p>
+          <div style="display:flex; justify-content:center; margin:10px 0;">
+            <canvas id="qr-cetak-canvas"></canvas>
+          </div>
+          <h3 style="margin:5px 0 0 0; font-size:14px; font-weight:bold;">${w.nama}</h3>
+          <p style="margin:0; font-size:12px;">${w.rumah}</p>
+        </div>
+      `;
+
+      areaCetak.classList.remove('hidden');
+
+      setTimeout(() => {
+        new QRious({
+          element: document.getElementById('qr-cetak-canvas'),
+          value: `${w.nama} (${w.rumah})`,
+          size: 140
+        });
+
+        // Jeda waktu 400ms agar browser merender canvas secara sempurna
+        setTimeout(() => {
+          window.print();
+          areaCetak.classList.add('hidden');
+        }, 400);
+      }, 100);
+    }
+
+    /* PERBAIKAN CETAK LAPORAN */
+    function cetakLaporan() {
+      const areaCetak = document.getElementById('area-cetak');
+      const isiCetak = document.getElementById('isi-cetak');
+
+      let rows = '';
+      dataJimpitan.forEach((item, i) => {
+        rows += `
+          <tr style="border-bottom:1px solid #ddd; text-align:left;">
+            <td style="padding:8px;">${i+1}</td>
+            <td style="padding:8px;">${item.tanggal}</td>
+            <td style="padding:8px;">${item.keterangan}</td>
+            <td style="padding:8px;">${item.jenis === 'masuk' ? 'Pemasukan' : 'Pengeluaran'}</td>
+            <td style="padding:8px; text-align:right;">Rp ${item.nominal.toLocaleString('id-ID')}</td>
+          </tr>
+        `;
+      });
+
+      isiCetak.innerHTML = `
+        <div style="padding: 20px;">
+          <h2 style="text-align:center; margin-bottom:5px; font-size:18px;">REKAP LAPORAN KAS JIMPITAN RT 07 / RW 02</h2>
+          <p style="text-align:center; font-size:12px; margin-top:0;">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+          <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:20px;">
+            <thead>
+              <tr style="background:#f2f2f2; border-bottom:2px solid #000; text-align:left;">
+                <th style="padding:8px;">No</th>
+                <th style="padding:8px;">Waktu</th>
+                <th style="padding:8px;">Keterangan</th>
+                <th style="padding:8px;">Jenis</th>
+                <th style="padding:8px; text-align:right;">Nominal</th>
+              </tr>
+            </thead>
+            <tbody>${rows || '<tr><td colspan="5" style="text-align:center; padding:15px;">Belum ada data transaksi.</td></tr>'}</tbody>
+          </table>
+        </div>
+      `;
+
+      areaCetak.classList.remove('hidden');
+
+      setTimeout(() => {
+        window.print();
+        areaCetak.classList.add('hidden');
+      }, 400);
+    }
+
+    function renderData() {
+      const listContainer = document.getElementById('list-riwayat');
+      let totalMasuk = 0, totalKeluar = 0;
+
+      if (dataJimpitan.length === 0) {
+        listContainer.innerHTML = `<p class="text-center text-xs text-gray-400 py-6">Belum ada transaksi dicatat.</p>`;
+      } else {
+        let html = '';
+        dataJimpitan.forEach(item => {
+           if (item.jenis === 'masuk') totalMasuk += item.nominal;
+          else totalKeluar += item.nominal;
+
+          const isMasuk = item.jenis === 'masuk';
+          html += `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center ${isMasuk ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">
+                  <i class="fa-solid ${isMasuk ? 'fa-arrow-down' : 'fa-arrow-up'} text-xs"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-gray-800">${item.keterangan}</p>
+                  <p class="text-[10px] text-gray-400">${item.tanggal}</p>
+                </div>
+              </div>
+              <p class="text-sm font-bold ${isMasuk ? 'text-emerald-600' : 'text-rose-600'}">
+                ${isMasuk ? '+' : '-'} Rp ${item.nominal.toLocaleString('id-ID')}
+              </p>
+            </div>
+          `;
+        });
+        listContainer.innerHTML = html;
+      }
+
+      document.getElementById('total-saldo').innerText = `Rp ${(totalMasuk - totalKeluar).toLocaleString('id-ID')}`;
+      document.getElementById('total-masuk').innerText = `Rp ${totalMasuk.toLocaleString('id-ID')}`;
+      document.getElementById('total-keluar').innerText = `Rp ${totalKeluar.toLocaleString('id-ID')}`;
+    }
+
+    renderData();
+  </script>
+</body>
+</html>
