@@ -45,7 +45,7 @@
 </head>
 <body class="bg-slate-900 min-h-screen text-slate-100 font-sans pb-10">
 
-  <!-- Audio Elemen Notifikasi Sukses -->
+  <!-- Audio Elemen Sukses -->
   <audio id="audio-sukses" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
   <!-- MODAL POP-UP PERINGATAN BAHAYA / SALDO KURANG -->
@@ -59,7 +59,7 @@
         <p id="teks-modal-peringatan" class="text-xs text-slate-300 mt-2 leading-relaxed">Pengeluaran melebihi sisa saldo kas yang kamu miliki saat ini! Dompet bisa boncos!</p>
       </div>
       <button type="button" onclick="tutupModalPeringatan()" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-sm shadow transition">
-        Saya Mengerti & Matikan Sirine
+        Saya Mengerti
       </button>
     </div>
   </div>
@@ -214,7 +214,7 @@
   <script>
     let dataKas = JSON.parse(localStorage.getItem('riski_kas_v2')) || [];
     let dataPinjam = JSON.parse(localStorage.getItem('riski_pinjam_v2')) || [];
-    let sirineInterval = null;
+    let sirineLoopInterval = null;
 
     function mainkanSuara() {
       const audio = document.getElementById('audio-sukses');
@@ -222,56 +222,54 @@
       audio.play().catch(err => console.log("Audio dicegah browser:", err));
     }
 
-    // Generator Suara Sirine Panjang Naik-Turun (Polisi/Peringatan)
-    function mainkanSirinePeringatan() {
-      if (sirineInterval) return; // Cegah dobel sirine
-      
+    // Generator Sirine Looping Terus-Menerus Sampai Tombol Ditekan
+    function mulaiSirineLoop() {
+      if (sirineLoopInterval) return; // Cegah dobel interval
+
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let pitchUp = true;
-        let freq = 400;
-
-        sirineInterval = setInterval(() => {
+        
+        const playSirenBurst = () => {
           if (audioCtx.state === 'suspended') {
             audioCtx.resume();
           }
-          const osc = audioCtx.createOscillator();
-          const gainNode = audioCtx.createGain();
+          let startTime = audioCtx.currentTime;
+          let duration = 1.0;
+          let osc = audioCtx.createOscillator();
+          let gain = audioCtx.createGain();
 
           osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+          osc.frequency.setValueAtTime(500, startTime);
+          osc.frequency.linearRampToValueAtTime(1000, startTime + 0.5);
+          osc.frequency.linearRampToValueAtTime(500, startTime + 1.0);
 
-          gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+          gain.gain.setValueAtTime(0.4, startTime);
+          gain.gain.setValueAtTime(0.4, startTime + duration - 0.05);
+          gain.gain.setValueAtTime(0.001, startTime + duration);
 
-          osc.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
 
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.3);
+          osc.start(startTime);
+          osc.stop(startTime + duration);
+        };
 
-          if (pitchUp) {
-            freq += 60;
-            if (freq >= 900) pitchUp = false;
-          } else {
-            freq -= 60;
-            if (freq <= 400) pitchUp = true;
-          }
-        }, 300);
-      } catch(e) {
-        console.log("AudioContext tidak didukung:", e);
+        playSirenBurst(); // Bunyi pertama langsung
+        sirineLoopInterval = setInterval(playSirenBurst, 1100); // Ulangi terus tiap 1.1 detik
+      } catch (e) {
+        console.log("AudioContext diblokir:", e);
       }
     }
 
-    function hentikanSirine() {
-      if (sirineInterval) {
-        clearInterval(sirineInterval);
-        sirineInterval = null;
+    function hentikanSirineLoop() {
+      if (sirineLoopInterval) {
+        clearInterval(sirineLoopInterval);
+        sirineLoopInterval = null;
       }
     }
 
     function tutupModalPeringatan() {
-      hentikanSirine();
+      hentikanSirineLoop(); // Matikan sirine pas tombol ditekan
       document.getElementById('modal-peringatan').classList.add('hidden');
     }
 
@@ -332,11 +330,12 @@
 
       const saldoSekarang = hitungSaldoAktif();
       if (jenis === 'keluar' && nominal > saldoSekarang) {
-        // Munculkan Modal Peringatan & Bunyikan Sirine Panjang
         document.getElementById('teks-modal-peringatan').innerText = `Pengeluaran (Rp ${nominal.toLocaleString('id-ID')}) melebihi sisa saldo kas kamu saat ini (Sisa: Rp ${saldoSekarang.toLocaleString('id-ID')})!`;
         document.getElementById('modal-peringatan').classList.remove('hidden');
-        mainkanSirinePeringatan();
-        return; // Hentikan penyimpanan sampai user konfirmasi/tutup
+        
+        // Nyalakan sirine yang berbunyi terus sampai tombol "Saya Mengerti" diklik
+        mulaiSirineLoop();
+        return;
       }
 
       dataKas.unshift({ jenis, keterangan, nominal, tanggal });
@@ -367,12 +366,6 @@
       document.getElementById('pinjam-catatan').value = '';
 
       mainkanSuara();
-      renderPinjam();
-    }
-
-    function ubahStatusPinjam(index) {
-      dataPinjam[index].status = dataPinjam[index].status === 'Belum Lunas' ? 'Lunas' : 'Belum Lunas';
-      localStorage.setItem('riski_pinjam_v2', JSON.stringify(dataPinjam));
       renderPinjam();
     }
 
