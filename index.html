@@ -5,13 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Buku Kas & Catatan Utang - Riski Saputra</title>
   
-  <!-- Konfigurasi Ikon & Tampilan Layar Utama HP -->
+  <!-- Konfigurasi PWA & Ikon Layar Utama HP -->
   <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png">
   <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png">
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Kas & Utang">
+
+  <!-- Manifest Inline untuk Mode Offline (PWA) -->
+  <link rel="manifest" href="data:application/manifest+json;charset=utf-8,{
+    %22name%22: %22Buku Kas & Catatan Utang Riski%22,
+    %22short_name%22: %22Kas & Utang%22,
+    %22start_url%22: %22./index.html%22,
+    %22display%22: %22standalone%22,
+    %22background_color%22: %22%230f172a%22,
+    %22theme_color%22: %22%230f172a%22,
+    %22icons%22: [
+      {
+        %22src%22: %22https://cdn-icons-png.flaticon.com/512/2489/2489756.png%22,
+        %22sizes%22: %22512x512%22,
+        %22type%22: %22image/png%22
+      }
+    ]
+  }">
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -212,6 +229,33 @@
   </div>
 
   <script>
+    // Pendaftaran Service Worker agar bisa Offline PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        const swCode = `
+          self.addEventListener('install', (e) => {
+            e.waitUntil(
+              caches.open('riski-kas-v1').then((cache) => {
+                return cache.addAll(['./', './index.html']);
+              })
+            );
+          });
+          self.addEventListener('fetch', (e) => {
+            e.respondWith(
+              caches.match(e.request).then((response) => {
+                return response || fetch(e.request);
+              })
+            );
+          });
+        `;
+        const blob = new Blob([swCode], { type: 'text/javascript' });
+        const swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl)
+          .then(() => console.log('Mode Offline PWA Aktif!'))
+          .catch(err => console.log('PWA Gagal:', err));
+      });
+    }
+
     let dataKas = JSON.parse(localStorage.getItem('riski_kas_v2')) || [];
     let dataPinjam = JSON.parse(localStorage.getItem('riski_pinjam_v2')) || [];
     let sirineLoopInterval = null;
@@ -222,9 +266,8 @@
       audio.play().catch(err => console.log("Audio dicegah browser:", err));
     }
 
-    // Generator Sirine Looping Terus-Menerus Sampai Tombol Ditekan
     function mulaiSirineLoop() {
-      if (sirineLoopInterval) return; // Cegah dobel interval
+      if (sirineLoopInterval) return;
 
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -254,8 +297,8 @@
           osc.stop(startTime + duration);
         };
 
-        playSirenBurst(); // Bunyi pertama langsung
-        sirineLoopInterval = setInterval(playSirenBurst, 1100); // Ulangi terus tiap 1.1 detik
+        playSirenBurst();
+        sirineLoopInterval = setInterval(playSirenBurst, 1100);
       } catch (e) {
         console.log("AudioContext diblokir:", e);
       }
@@ -269,7 +312,7 @@
     }
 
     function tutupModalPeringatan() {
-      hentikanSirineLoop(); // Matikan sirine pas tombol ditekan
+      hentikanSirineLoop();
       document.getElementById('modal-peringatan').classList.add('hidden');
     }
 
@@ -332,8 +375,6 @@
       if (jenis === 'keluar' && nominal > saldoSekarang) {
         document.getElementById('teks-modal-peringatan').innerText = `Pengeluaran (Rp ${nominal.toLocaleString('id-ID')}) melebihi sisa saldo kas kamu saat ini (Sisa: Rp ${saldoSekarang.toLocaleString('id-ID')})!`;
         document.getElementById('modal-peringatan').classList.remove('hidden');
-        
-        // Nyalakan sirine yang berbunyi terus sampai tombol "Saya Mengerti" diklik
         mulaiSirineLoop();
         return;
       }
@@ -566,3 +607,4 @@
   </script>
 </body>
 </html>
+
