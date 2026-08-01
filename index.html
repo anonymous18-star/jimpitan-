@@ -111,10 +111,17 @@
     <!-- TAB 1: KAS MASUK & KELUAR -->
     <div id="sec-kas" class="bg-slate-800 rounded-2xl p-5 shadow border border-slate-700 space-y-5">
       <h2 class="text-base font-bold text-white border-b border-slate-700 pb-2">Catat Pemasukan / Pengeluaran Kas</h2>
+      
+      <!-- Peringatan Saldo Tipis / Minus (Muncul Dinamis) -->
+      <div id="notif-peringatan" class="hidden p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl text-rose-300 text-xs flex items-center space-x-2">
+        <i class="fa-solid fa-triangle-exclamation text-base"></i>
+        <span id="teks-peringatan">Peringatan: Pengeluaran melebihi sisa saldo kas saat ini!</span>
+      </div>
+
       <form onsubmit="simpanKas(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">Jenis Kas</label>
-          <select id="kas-jenis" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 outline-none focus:border-blue-500">
+          <select id="kas-jenis" onchange="cekPeringatanLive()" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 outline-none focus:border-blue-500">
             <option value="masuk">Pemasukan (Uang Masuk / Gaji / Dll)</option>
             <option value="keluar">Pengeluaran (Belanja / Kebutuhan)</option>
           </select>
@@ -125,7 +132,7 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">Nominal (Rp)</label>
-          <input type="number" id="kas-nominal" placeholder="50000" required min="100" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 outline-none focus:border-blue-500">
+          <input type="number" id="kas-nominal" oninput="cekPeringatanLive()" placeholder="50000" required min="100" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 outline-none focus:border-blue-500">
         </div>
         <button type="submit" class="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow text-sm transition"><i class="fa-solid fa-floppy-disk mr-1"></i>Simpan Kas</button>
       </form>
@@ -222,6 +229,30 @@
       }
     }
 
+    // Fungsi Hitung Saldo Realtime untuk Peringatan
+    function hitungSaldoAktif() {
+      let masuk = 0, keluar = 0;
+      dataKas.forEach(item => {
+        if (item.jenis === 'masuk') masuk += item.nominal;
+        else keluar += item.nominal;
+      });
+      return masuk - keluar;
+    }
+
+    // Cek Peringatan Otomatis Saat Mengetik Pengeluaran
+    function cekPeringatanLive() {
+      const jenis = document.getElementById('kas-jenis').value;
+      const nominalInput = parseInt(document.getElementById('kas-nominal').value) || 0;
+      const notifEl = document.getElementById('notif-peringatan');
+      const saldoSekarang = hitungSaldoAktif();
+
+      if (jenis === 'keluar' && nominalInput > saldoSekarang) {
+        notifEl.classList.remove('hidden');
+      } else {
+        notifEl.classList.add('hidden');
+      }
+    }
+
     function simpanKas(e) {
       e.preventDefault();
       const jenis = document.getElementById('kas-jenis').value;
@@ -231,11 +262,19 @@
 
       if (!keterangan || isNaN(nominal)) return;
 
+      const saldoSekarang = hitungSaldoAktif();
+      if (jenis === 'keluar' && nominal > saldoSekarang) {
+        if (!confirm("⚠️ Peringatan: Nominal pengeluaran melebihi sisa saldo kas kamu saat ini! Yakin ingin tetap menyimpannya?")) {
+          return;
+        }
+      }
+
       dataKas.unshift({ jenis, keterangan, nominal, tanggal });
       localStorage.setItem('riski_kas_v2', JSON.stringify(dataKas));
       
       document.getElementById('kas-keterangan').value = '';
       document.getElementById('kas-nominal').value = '';
+      document.getElementById('notif-peringatan').classList.add('hidden');
       
       mainkanSuara();
       renderKas();
@@ -280,6 +319,7 @@
         dataKas.splice(index, 1);
         localStorage.setItem('riski_kas_v2', JSON.stringify(dataKas));
         renderKas();
+        cekPeringatanLive();
       }
     }
 
@@ -422,7 +462,7 @@
                 <th style="padding:6px;">No</th>
                 <th style="padding:6px;">Waktu</th>
                 <th style="padding:6px;">Keterangan</th>
-                <th style="padding:6px;">Jenis</th>
+                <th style="padding:6px;">Jenis Kas</th>
                 <th style="padding:6px; text-align:right;">Nominal</th>
               </tr>
             </thead>
@@ -440,7 +480,7 @@
                 <th style="padding:6px;">Catatan</th>
               </tr>
             </thead>
-            <tbody>${rowsPinjam || '<tr><td colspan="5" style="text-align:ceter; padding:10px;">Tidak ada data pinjaman.</td></tr>'}</tbody>
+            <tbody>${rowsPinjam || '<tr><td colspan="5" style="text-align:center; padding:10px;">Tidak ada data pinjaman.</td></tr>'}</tbody>
           </table>
         </div>
       `;
@@ -451,7 +491,7 @@
         areaCetak.classList.add('hidden');
       }, 400);
     }
-  
+
     renderKas();
     renderPinjam();
   </script>
