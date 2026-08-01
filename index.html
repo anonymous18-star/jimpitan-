@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Buku Kas & Catatan Utang - Riski Saputra</title>
+  
+  <!-- Konfigurasi Ikon & Tampilan Layar Utama HP -->
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kas & Utang">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
@@ -266,7 +275,6 @@
       }
     }
 
-    // Fungsi Hapus Kas Menggunakan Index Baris
     function hapusKas(index) {
       if (confirm("Hapus catatan kas ini?")) {
         dataKas.splice(index, 1);
@@ -432,7 +440,7 @@
                 <th style="padding:6px;">Catatan</th>
               </tr>
             </thead>
-            <tbody>${rowsPinjam || '<tr><td colspan="5" style="text-align:center; padding:10px;">Tidak ada data pinjaman.</td></tr>'}</tbody>
+            <tbody>${rowsPinjam || '<tr><td colspan="5" style="text-align:ceter; padding:10px;">Tidak ada data pinjaman.</td></tr>'}</tbody>
           </table>
         </div>
       `;
@@ -449,3 +457,4 @@
   </script>
 </body>
 </html>
+```eof
